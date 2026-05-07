@@ -122,8 +122,8 @@ module.exports = async (req, res) => {
               <p style="margin:0 0 8px;color:#FFD700;font-weight:600;">Bu süreçte seni bekleyenler:</p>
               <ul style="color:#cccccc;margin:0;padding-left:20px;line-height:1.8;">
                 <li>Lansmanda 14 gün ücretsiz Pro deneme (kart bilgisi gerektirmez)</li>
-                <li>İlk 100 kayıt için özel indirim</li>
-                <li>Anlık fiyat takibi, akıllı risk analizi, profesyonel hesaplayıcılar</li>
+                <li>Anlık fiyat takibi ve canlı haber akışı</li>
+                <li>Akıllı risk analizi ve profesyonel hesaplayıcılar</li>
               </ul>
             </div>
             <p style="color:#888888;font-size:13px;margin-top:32px;line-height:1.5;">
