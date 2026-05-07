@@ -16,6 +16,7 @@
  */
 const { Redis } = require("@upstash/redis");
 const { Resend } = require("resend");
+const crypto = require("crypto");
 
 const redis = new Redis({
   url: process.env.KV_REST_API_URL,
@@ -103,6 +104,18 @@ module.exports = async (req, res) => {
 
     const total = await redis.scard("subscribers");
 
+    // Unsubscribe token (HMAC-SHA256(email, ADMIN_SECRET) ilk 32 hex char) +
+    // tek tıklama URL'si. Hem mail body footer'ında hem de RFC 8058 List-
+    // Unsubscribe header'ında kullanılır.
+    const unsubToken = crypto
+      .createHmac("sha256", process.env.ADMIN_SECRET || "")
+      .update(normalizedEmail)
+      .digest("hex")
+      .substring(0, 32);
+    const unsubUrl =
+      `https://www.goldbalance.ai/api/unsubscribe?email=${encodeURIComponent(normalizedEmail)}` +
+      `&token=${unsubToken}`;
+
     // 6. Kullanıcıya hoş geldin maili (fail tolerant)
     try {
       await resend.emails.send({
@@ -110,6 +123,13 @@ module.exports = async (req, res) => {
         to: normalizedEmail,
         subject: "Hoş geldin! GOLD BALANCE'a kaydoldun",
         replyTo: "goldbalance.business@gmail.com",
+        // RFC 8058 — Gmail Şubat 2024'ten beri toplu gönderici listesinde
+        // List-Unsubscribe + List-Unsubscribe-Post zorunlu. Header olmadan
+        // Gmail mailleri spam'e atabilir.
+        headers: {
+          "List-Unsubscribe": `<${unsubUrl}>, <mailto:goldbalance.business@gmail.com?subject=Unsubscribe>`,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
         html: `
           <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px;background:#0a0a0a;color:#ffffff;border-radius:12px;">
             <h1 style="color:#FFD700;margin:0 0 16px;font-size:32px;">GOLD BALANCE</h1>
@@ -127,8 +147,14 @@ module.exports = async (req, res) => {
               </ul>
             </div>
             <p style="color:#888888;font-size:13px;margin-top:32px;line-height:1.5;">
-              Yatırım tavsiyesi değildir. Bu maili istemediysen yok say veya
-              <a href="mailto:goldbalance.business@gmail.com" style="color:#FFD700;text-decoration:none;">bize ulaş</a>.
+              Yatırım tavsiyesi değildir.
+            </p>
+            <p style="color:#888888;font-size:12px;margin-top:8px;line-height:1.6;">
+              Bu maili artık almak istemiyorsan
+              <a href="${unsubUrl}" style="color:#FFD700;text-decoration:underline;">listeden çık</a>
+              ·
+              Sorun varsa
+              <a href="mailto:goldbalance.business@gmail.com" style="color:#FFD700;text-decoration:underline;">bize ulaş</a>
             </p>
             <p style="color:#555555;font-size:12px;margin-top:16px;">
               © 2026 GOLD BALANCE · goldbalance.ai
