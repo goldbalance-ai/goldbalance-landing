@@ -247,11 +247,24 @@
 
       <form class="email-form" id="emailForm">
         <p class="form-label">Lansmanda ilk haberdar olanlardan ol</p>
+
+        <!-- Honeypot: botlar dolduracak, gerçek kullanıcı görmeyecek.
+             Backend honeypot doluysa sessizce 200 döner, KV'ye yazmaz. -->
+        <input
+          type="text"
+          name="hp_field"
+          id="hpField"
+          tabindex="-1"
+          autocomplete="off"
+          aria-hidden="true"
+          style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;"
+        />
+
         <div class="form-input-group">
-          <input 
-            type="email" 
-            id="email" 
-            placeholder="email@adresiniz.com" 
+          <input
+            type="email"
+            id="email"
+            placeholder="email@adresiniz.com"
             required
           >
           <button type="submit" id="submitBtn">Haber Ver</button>
@@ -269,36 +282,58 @@
   <script>
     const form = document.getElementById('emailForm');
     const emailInput = document.getElementById('email');
+    const hpInput = document.getElementById('hpField');
     const submitBtn = document.getElementById('submitBtn');
     const message = document.getElementById('formMessage');
 
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = emailInput.value.trim();
-      
+
       if (!email || !email.includes('@')) {
         message.className = 'form-message error';
         message.textContent = 'Geçerli bir e-posta giriniz';
         return;
       }
-      
-      // Şimdilik localStorage'a kaydet, sonra backend bağlanacak
-      const stored = JSON.parse(localStorage.getItem('emails') || '[]');
-      if (!stored.includes(email)) {
-        stored.push(email);
-        localStorage.setItem('emails', JSON.stringify(stored));
-      }
-      
+
       submitBtn.disabled = true;
-      submitBtn.textContent = '✓ Kaydedildi';
-      message.className = 'form-message success';
-      message.textContent = 'Teşekkürler! Lansman duyurusunda haber edeceğiz.';
-      
-      setTimeout(() => {
-        emailInput.value = '';
+      submitBtn.textContent = 'Gönderiliyor...';
+      message.className = 'form-message';
+      message.textContent = '';
+
+      try {
+        const res = await fetch('/api/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: email,
+            honeypot: hpInput ? hpInput.value : '',
+          }),
+        });
+        const data = await res.json();
+
+        if (data.ok) {
+          submitBtn.textContent = '✓ Kaydedildi';
+          message.className = 'form-message success';
+          message.textContent = data.message || 'Teşekkürler! Lansman duyurusunda haber edeceğiz.';
+
+          setTimeout(() => {
+            emailInput.value = '';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Haber Ver';
+          }, 3000);
+        } else {
+          message.className = 'form-message error';
+          message.textContent = data.error || 'Bir hata oluştu, tekrar dene';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Haber Ver';
+        }
+      } catch (err) {
+        message.className = 'form-message error';
+        message.textContent = 'Bağlantı hatası, tekrar dene';
         submitBtn.disabled = false;
         submitBtn.textContent = 'Haber Ver';
-      }, 3000);
+      }
     });
   </script>
 </body>

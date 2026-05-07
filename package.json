@@ -1,0 +1,13 @@
+{
+  "name": "goldbalance-landing",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GOLD BALANCE landing page (plain HTML + Vercel Functions for /api/subscribe).",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.34.3",
+    "resend": "^4.0.1"
+  }
+}
